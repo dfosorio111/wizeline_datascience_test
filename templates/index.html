@@ -1,0 +1,177 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>XGBoost Model Deployment</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .form-section {
+            border: 1px solid #ddd;
+            padding: 20px;
+            border-radius: 5px;
+        }
+        .feature-inputs {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 10px;
+        }
+        .feature-input {
+            display: flex;
+            flex-direction: column;
+        }
+        input, button {
+            padding: 8px;
+            margin-top: 5px;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+            padding: 10px 15px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .result-section {
+            margin-top: 20px;
+            display: none;
+        }
+        .error {
+            color: red;
+        }
+    </style>
+</head>
+<body>
+    <h1>XGBoost Model Deployment</h1>
+    
+    <div class="container">
+        <div class="form-section">
+            <h2>Manual Feature Input</h2>
+            <form id="manual-form">
+                <div class="feature-inputs">
+                    {% for feature in feature_names %}
+                    <div class="feature-input">
+                        <label for="{{ feature }}">{{ feature }}</label>
+                        <input type="number" step="any" id="{{ feature }}" name="{{ feature }}" required>
+                    </div>
+                    {% endfor %}
+                </div>
+                <button type="submit" style="margin-top: 20px;">Predict</button>
+            </form>
+            <div id="manual-result" class="result-section">
+                <h3>Prediction Result</h3>
+                <p id="prediction-value"></p>
+            </div>
+        </div>
+        
+        <div class="form-section">
+            <h2>CSV File Upload</h2>
+            <p>Upload a CSV file with columns for each feature. The file should include headers matching the feature names.</p>
+            <form id="csv-form" enctype="multipart/form-data">
+                <input type="file" id="csv-file" name="file" accept=".csv" required>
+                <button type="submit" style="margin-top: 10px;">Upload and Predict</button>
+            </form>
+            <div id="csv-result" class="result-section">
+                <h3>Batch Prediction Results</h3>
+                <p id="batch-summary"></p>
+                <div id="batch-details"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('manual-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            
+            fetch('/predict', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                const resultDiv = document.getElementById('manual-result');
+                resultDiv.style.display = 'block';
+                
+                if (data.error) {
+                    document.getElementById('prediction-value').innerHTML = `<span class="error">Error: ${data.error}</span>`;
+                } else {
+                    document.getElementById('prediction-value').textContent = `Predicted value: ${data.prediction}`;
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                document.getElementById('manual-result').style.display = 'block';
+                document.getElementById('prediction-value').innerHTML = `<span class="error">Error: ${error.message}</span>`;
+            });
+        });
+        
+        document.getElementById('csv-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            
+            fetch('/predict_csv', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                const resultDiv = document.getElementById('csv-result');
+                resultDiv.style.display = 'block';
+                
+                if (data.error) {
+                    document.getElementById('batch-summary').innerHTML = `<span class="error">Error: ${data.error}</span>`;
+                    document.getElementById('batch-details').innerHTML = '';
+                } else {
+                    document.getElementById('batch-summary').textContent = `Processed ${data.count} rows successfully.`;
+                    
+                    // Display first 5 predictions
+                    const displayCount = Math.min(5, data.predictions.length);
+                    let detailsHtml = `<h4>Sample of results (showing ${displayCount} of ${data.count}):</h4>`;
+                    
+                    if (displayCount > 0) {
+                        detailsHtml += '<table border="1" style="border-collapse: collapse; width: 100%;">';
+                        
+                        // Create header row
+                        detailsHtml += '<tr><th>Row</th><th>Prediction</th></tr>';
+                        
+                        // Add data rows
+                        for (let i = 0; i < displayCount; i++) {
+                            detailsHtml += `<tr>
+                                <td>${i+1}</td>
+                                <td>${data.predictions[i].prediction}</td>
+                            </tr>`;
+                        }
+                        
+                        detailsHtml += '</table>';
+                    }
+                    
+                    document.getElementById('batch-details').innerHTML = detailsHtml;
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                document.getElementById('csv-result').style.display = 'block';
+                document.getElementById('batch-summary').innerHTML = `<span class="error">Error: ${error.message}</span>`;
+                document.getElementById('batch-details').innerHTML = '';
+            });
+        });
+    </script>
+</body>
+</html>
+    
