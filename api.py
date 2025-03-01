@@ -2,8 +2,12 @@ import os
 import numpy as np
 import pandas as pd
 import joblib
-from flask import Flask, request, render_template, jsonify
+import matplotlib.pyplot as plt
+import shap
 import io
+import base64
+from flask import Flask, request, render_template, jsonify
+import xgboost as xgb
 
 app = Flask(__name__)
 
@@ -24,10 +28,124 @@ feature_names = [
     'feature_15', 'feature_16', 'feature_17', 'feature_18', 'feature_19'
 ]
 
+# Initialize SHAP explainer
+try:
+    explainer = shap.TreeExplainer(model)
+    shap_available = True
+except Exception as e:
+    print(f"Warning: SHAP initialization failed: {e}")
+    print("SHAP interpretability will not be available")
+    shap_available = False
+
+def plot_to_base64(plt):
+    """Convert matplotlib plot to base64 string for HTML embedding"""
+    buffer = io.BytesIO()
+    plt.savefig(buffer, format='png', bbox_inches='tight')
+    buffer.seek(0)
+    image_png = buffer.getvalue()
+    buffer.close()
+    plt.close()
+    
+    # Convert to base64 to embed in HTML
+    encoded = base64.b64encode(image_png).decode('utf-8')
+    return f"data:image/png;base64,{encoded}"
+
+def get_feature_importance():
+    """Generate feature importance plot for the model"""
+    # Get feature importance
+    if hasattr(model, 'feature_importances_'):
+        importance = model.feature_importances_
+    else:
+        # For XGBoost models that don't have the attribute directly
+        importance = model.get_booster().get_score(importance_type='weight')
+        # Convert to array if it's a dictionary
+        if isinstance(importance, dict):
+            importance_array = np.zeros(len(feature_names))
+            for key, value in importance.items():
+                try:
+                    idx = int(key.replace('f', ''))
+                    if idx < len(importance_array):
+                        importance_array[idx] = value
+                except ValueError:
+                    pass
+            importance = importance_array
+
+    # Create plot
+    plt.figure(figsize=(10, 6))
+    sorted_idx = np.argsort(importance)
+    plt.barh(range(len(sorted_idx)), importance[sorted_idx])
+    plt.yticks(range(len(sorted_idx)), [feature_names[i] for i in sorted_idx])
+    plt.xlabel('Feature Importance')
+    plt.title('Feature Importance')
+    plt.tight_layout()
+    
+    return plot_to_base64(plt)
+
+def get_shap_summary_plot(features_df):
+    """Generate SHAP summary plot for the given features"""
+    if not shap_available:
+        return None
+    
+    # Scale the features
+    scaled_features = scaler.transform(features_df)
+    
+    # Calculate SHAP values
+    shap_values = explainer.shap_values(scaled_features)
+    
+    # Create summary plot
+    plt.figure(figsize=(10, 6))
+    shap.summary_plot(shap_values, scaled_features, feature_names=feature_names, show=False)
+    plt.title('SHAP Summary Plot')
+    plt.tight_layout()
+    
+    return plot_to_base64(plt)
+
+def get_shap_decision_plot(features_df, idx=0):
+    """Generate SHAP decision plot for a single instance"""
+    if not shap_available:
+        return None
+    
+    # Scale the features
+    scaled_features = scaler.transform(features_df)
+    
+    # Calculate SHAP values
+    shap_values = explainer.shap_values(scaled_features)
+    
+    # Create decision plot for the specified instance
+    plt.figure(figsize=(10, 6))
+    shap.decision_plot(explainer.expected_value, shap_values[idx], 
+                      features=scaled_features[idx], feature_names=feature_names, show=False)
+    plt.title('SHAP Decision Plot')
+    plt.tight_layout()
+    
+    return plot_to_base64(plt)
+
+def get_shap_force_plot(features_df, idx=0):
+    """Generate SHAP force plot for a single instance"""
+    if not shap_available:
+        return None
+    
+    # Scale the features
+    scaled_features = scaler.transform(features_df)
+    
+    # Calculate SHAP values
+    shap_values = explainer.shap_values(scaled_features)
+    
+    # Create force plot for the specified instance
+    plt.figure(figsize=(10, 3))
+    shap.force_plot(explainer.expected_value, shap_values[idx], 
+                   features=scaled_features[idx], feature_names=feature_names, 
+                   matplotlib=True, show=False)
+    plt.title('SHAP Force Plot')
+    plt.tight_layout()
+    
+    return plot_to_base64(plt)
+
 @app.route('/')
 def home():
     """Render the home page with the input form."""
-    return render_template('index.html', feature_names=feature_names)
+    return render_template('index.html', feature_names=feature_names, 
+                          shap_available=shap_available)
 
 @app.route('/predict', methods=['POST'])
 def predict():
@@ -46,6 +164,7 @@ def predict():
         
         # Convert to numpy array and reshape
         features_array = np.array(features).reshape(1, -1)
+        features_df = pd.DataFrame([features], columns=feature_names)
         
         # Scale the features
         scaled_features = scaler.transform(features_array)
@@ -53,12 +172,27 @@ def predict():
         # Make prediction
         prediction = model.predict(scaled_features)[0]
         
+        # Get interpretation if requested
+        interpretation_method = request.form.get('interpretation_method', None)
+        interpretations = {}
+        
+        if interpretation_method == 'feature_importance':
+            interpretations['feature_importance'] = get_feature_importance()
+        
+        elif interpretation_method == 'shap' and shap_available:
+            interpretations['shap_summary'] = get_shap_summary_plot(features_df)
+            interpretations['shap_decision'] = get_shap_decision_plot(features_df)
+            interpretations['shap_force'] = get_shap_force_plot(features_df)
+        
         return jsonify({
             'prediction': float(prediction),
-            'features': {name: float(value) for name, value in zip(feature_names, features)}
+            'features': {name: float(value) for name, value in zip(feature_names, features)},
+            'interpretations': interpretations
         })
     
     except Exception as e:
+        import traceback
+        print(traceback.format_exc())
         return jsonify({'error': str(e)})
 
 @app.route('/predict_csv', methods=['POST'])
@@ -100,18 +234,38 @@ def predict_csv():
             row_data['prediction'] = float(pred)
             results.append(row_data)
         
+        # Get interpretation if requested
+        interpretation_method = request.form.get('interpretation_method', None)
+        interpretations = {}
+        
+        if interpretation_method == 'feature_importance':
+            interpretations['feature_importance'] = get_feature_importance()
+        
+        elif interpretation_method == 'shap' and shap_available:
+            interpretations['shap_summary'] = get_shap_summary_plot(features_df)
+            # For CSV uploads, we can show the decision plot for the first row as an example
+            if len(features_df) > 0:
+                interpretations['shap_decision'] = get_shap_decision_plot(features_df, 0)
+                interpretations['shap_force'] = get_shap_force_plot(features_df, 0)
+        
         return jsonify({
             'predictions': results,
-            'count': len(results)
+            'count': len(results),
+            'interpretations': interpretations
         })
     
     except Exception as e:
+        import traceback
+        print(traceback.format_exc())
         return jsonify({'error': str(e)})
 
 @app.route('/health', methods=['GET'])
 def health_check():
     """Health check endpoint for monitoring."""
     return jsonify({'status': 'healthy'})
+
+
+
 
 # Create templates directory and HTML file
 def create_templates():
@@ -122,7 +276,7 @@ def create_templates():
 <!DOCTYPE html>
 <html>
 <head>
-    <title>XGBoost Model Deployment</title>
+    <title>Catboost Model Deployment with Interpretability</title>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
@@ -151,7 +305,7 @@ def create_templates():
             display: flex;
             flex-direction: column;
         }
-        input, button {
+        input, button, select {
             padding: 8px;
             margin-top: 5px;
         }
@@ -172,10 +326,19 @@ def create_templates():
         .error {
             color: red;
         }
+        .interpretation-section {
+            margin-top: 20px;
+            overflow-x: auto;
+        }
+        .interpretation-section img {
+            max-width: 100%;
+            height: auto;
+            margin-top: 15px;
+        }
     </style>
 </head>
 <body>
-    <h1>XGBoost Model Deployment</h1>
+    <h1>Catboost Model Deployment </h1>
     
     <div class="container">
         <div class="form-section">
@@ -189,11 +352,41 @@ def create_templates():
                     </div>
                     {% endfor %}
                 </div>
+                
+                <div style="margin-top: 20px;">
+                    <label for="interpretation-select">Model Interpretation Method:</label>
+                    <select id="interpretation-select" name="interpretation_method">
+                        <option value="none">None</option>
+                        <option value="feature_importance">Feature Importance</option>
+                        {% if shap_available %}
+                        <option value="shap">SHAP Values</option>
+                        {% endif %}
+                    </select>
+                </div>
+                
                 <button type="submit" style="margin-top: 20px;">Predict</button>
             </form>
             <div id="manual-result" class="result-section">
                 <h3>Prediction Result</h3>
                 <p id="prediction-value"></p>
+                
+                <div id="manual-interpretation" class="interpretation-section">
+                    <div id="feature-importance-plot" style="display: none;">
+                        <h4>Feature Importance</h4>
+                        <img id="feature-importance-img" src="" alt="Feature Importance Plot">
+                    </div>
+                    
+                    <div id="shap-plots" style="display: none;">
+                        <h4>SHAP Summary Plot</h4>
+                        <img id="shap-summary-img" src="" alt="SHAP Summary Plot">
+                        
+                        <h4>SHAP Decision Plot</h4>
+                        <img id="shap-decision-img" src="" alt="SHAP Decision Plot">
+                        
+                        <h4>SHAP Force Plot</h4>
+                        <img id="shap-force-img" src="" alt="SHAP Force Plot">
+                    </div>
+                </div>
             </div>
         </div>
         
@@ -202,12 +395,42 @@ def create_templates():
             <p>Upload a CSV file with columns for each feature. The file should include headers matching the feature names.</p>
             <form id="csv-form" enctype="multipart/form-data">
                 <input type="file" id="csv-file" name="file" accept=".csv" required>
+                
+                <div style="margin-top: 10px;">
+                    <label for="csv-interpretation-select">Model Interpretation Method:</label>
+                    <select id="csv-interpretation-select" name="interpretation_method">
+                        <option value="none">None</option>
+                        <option value="feature_importance">Feature Importance</option>
+                        {% if shap_available %}
+                        <option value="shap">SHAP Values</option>
+                        {% endif %}
+                    </select>
+                </div>
+                
                 <button type="submit" style="margin-top: 10px;">Upload and Predict</button>
             </form>
             <div id="csv-result" class="result-section">
                 <h3>Batch Prediction Results</h3>
                 <p id="batch-summary"></p>
                 <div id="batch-details"></div>
+                
+                <div id="csv-interpretation" class="interpretation-section">
+                    <div id="csv-feature-importance-plot" style="display: none;">
+                        <h4>Feature Importance</h4>
+                        <img id="csv-feature-importance-img" src="" alt="Feature Importance Plot">
+                    </div>
+                    
+                    <div id="csv-shap-plots" style="display: none;">
+                        <h4>SHAP Summary Plot (All Rows)</h4>
+                        <img id="csv-shap-summary-img" src="" alt="SHAP Summary Plot">
+                        
+                        <h4>SHAP Decision Plot (First Row Example)</h4>
+                        <img id="csv-shap-decision-img" src="" alt="SHAP Decision Plot">
+                        
+                        <h4>SHAP Force Plot (First Row Example)</h4>
+                        <img id="csv-shap-force-img" src="" alt="SHAP Force Plot">
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -229,14 +452,45 @@ def create_templates():
                 
                 if (data.error) {
                     document.getElementById('prediction-value').innerHTML = `<span class="error">Error: ${data.error}</span>`;
+                    // Hide interpretation sections
+                    document.getElementById('feature-importance-plot').style.display = 'none';
+                    document.getElementById('shap-plots').style.display = 'none';
                 } else {
                     document.getElementById('prediction-value').textContent = `Predicted value: ${data.prediction}`;
+                    
+                    // Handle interpretations
+                    if (data.interpretations) {
+                        // Feature importance
+                        if (data.interpretations.feature_importance) {
+                            document.getElementById('feature-importance-plot').style.display = 'block';
+                            document.getElementById('feature-importance-img').src = data.interpretations.feature_importance;
+                        } else {
+                            document.getElementById('feature-importance-plot').style.display = 'none';
+                        }
+                        
+                        // SHAP plots
+                        if (data.interpretations.shap_summary) {
+                            document.getElementById('shap-plots').style.display = 'block';
+                            document.getElementById('shap-summary-img').src = data.interpretations.shap_summary;
+                            document.getElementById('shap-decision-img').src = data.interpretations.shap_decision;
+                            document.getElementById('shap-force-img').src = data.interpretations.shap_force;
+                        } else {
+                            document.getElementById('shap-plots').style.display = 'none';
+                        }
+                    } else {
+                        // Hide all interpretation sections if no interpretations
+                        document.getElementById('feature-importance-plot').style.display = 'none';
+                        document.getElementById('shap-plots').style.display = 'none';
+                    }
                 }
             })
             .catch(error => {
                 console.error('Error:', error);
                 document.getElementById('manual-result').style.display = 'block';
                 document.getElementById('prediction-value').innerHTML = `<span class="error">Error: ${error.message}</span>`;
+                // Hide interpretation sections
+                document.getElementById('feature-importance-plot').style.display = 'none';
+                document.getElementById('shap-plots').style.display = 'none';
             });
         });
         
@@ -257,6 +511,9 @@ def create_templates():
                 if (data.error) {
                     document.getElementById('batch-summary').innerHTML = `<span class="error">Error: ${data.error}</span>`;
                     document.getElementById('batch-details').innerHTML = '';
+                    // Hide interpretation sections
+                    document.getElementById('csv-feature-importance-plot').style.display = 'none';
+                    document.getElementById('csv-shap-plots').style.display = 'none';
                 } else {
                     document.getElementById('batch-summary').textContent = `Processed ${data.count} rows successfully.`;
                     
@@ -282,6 +539,31 @@ def create_templates():
                     }
                     
                     document.getElementById('batch-details').innerHTML = detailsHtml;
+                    
+                    // Handle interpretations
+                    if (data.interpretations) {
+                        // Feature importance
+                        if (data.interpretations.feature_importance) {
+                            document.getElementById('csv-feature-importance-plot').style.display = 'block';
+                            document.getElementById('csv-feature-importance-img').src = data.interpretations.feature_importance;
+                        } else {
+                            document.getElementById('csv-feature-importance-plot').style.display = 'none';
+                        }
+                        
+                        // SHAP plots
+                        if (data.interpretations.shap_summary) {
+                            document.getElementById('csv-shap-plots').style.display = 'block';
+                            document.getElementById('csv-shap-summary-img').src = data.interpretations.shap_summary;
+                            document.getElementById('csv-shap-decision-img').src = data.interpretations.shap_decision;
+                            document.getElementById('csv-shap-force-img').src = data.interpretations.shap_force;
+                        } else {
+                            document.getElementById('csv-shap-plots').style.display = 'none';
+                        }
+                    } else {
+                        // Hide all interpretation sections if no interpretations
+                        document.getElementById('csv-feature-importance-plot').style.display = 'none';
+                        document.getElementById('csv-shap-plots').style.display = 'none';
+                    }
                 }
             })
             .catch(error => {
@@ -289,6 +571,9 @@ def create_templates():
                 document.getElementById('csv-result').style.display = 'block';
                 document.getElementById('batch-summary').innerHTML = `<span class="error">Error: ${error.message}</span>`;
                 document.getElementById('batch-details').innerHTML = '';
+                // Hide interpretation sections
+                document.getElementById('csv-feature-importance-plot').style.display = 'none';
+                document.getElementById('csv-shap-plots').style.display = 'none';
             });
         });
     </script>
@@ -299,8 +584,9 @@ def create_templates():
     with open('templates/index.html', 'w') as f:
         f.write(index_html)
 
+
+
 if __name__ == '__main__':
     create_templates()
-    print("Starting the model deployment server...")
     print("Access the web interface at http://127.0.0.1:5000")
     app.run(debug=True, host='0.0.0.0', port=5000)
