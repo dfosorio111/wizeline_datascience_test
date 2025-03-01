@@ -2,7 +2,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>XGBoost Model Deployment</title>
+    <title>Catboost Model Deployment with Interpretability</title>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
@@ -31,7 +31,7 @@
             display: flex;
             flex-direction: column;
         }
-        input, button {
+        input, button, select {
             padding: 8px;
             margin-top: 5px;
         }
@@ -52,10 +52,19 @@
         .error {
             color: red;
         }
+        .interpretation-section {
+            margin-top: 20px;
+            overflow-x: auto;
+        }
+        .interpretation-section img {
+            max-width: 100%;
+            height: auto;
+            margin-top: 15px;
+        }
     </style>
 </head>
 <body>
-    <h1>XGBoost Model Deployment</h1>
+    <h1>Catboost Model Deployment </h1>
     
     <div class="container">
         <div class="form-section">
@@ -69,11 +78,41 @@
                     </div>
                     {% endfor %}
                 </div>
+                
+                <div style="margin-top: 20px;">
+                    <label for="interpretation-select">Model Interpretation Method:</label>
+                    <select id="interpretation-select" name="interpretation_method">
+                        <option value="none">None</option>
+                        <option value="feature_importance">Feature Importance</option>
+                        {% if shap_available %}
+                        <option value="shap">SHAP Values</option>
+                        {% endif %}
+                    </select>
+                </div>
+                
                 <button type="submit" style="margin-top: 20px;">Predict</button>
             </form>
             <div id="manual-result" class="result-section">
                 <h3>Prediction Result</h3>
                 <p id="prediction-value"></p>
+                
+                <div id="manual-interpretation" class="interpretation-section">
+                    <div id="feature-importance-plot" style="display: none;">
+                        <h4>Feature Importance</h4>
+                        <img id="feature-importance-img" src="" alt="Feature Importance Plot">
+                    </div>
+                    
+                    <div id="shap-plots" style="display: none;">
+                        <h4>SHAP Summary Plot</h4>
+                        <img id="shap-summary-img" src="" alt="SHAP Summary Plot">
+                        
+                        <h4>SHAP Decision Plot</h4>
+                        <img id="shap-decision-img" src="" alt="SHAP Decision Plot">
+                        
+                        <h4>SHAP Force Plot</h4>
+                        <img id="shap-force-img" src="" alt="SHAP Force Plot">
+                    </div>
+                </div>
             </div>
         </div>
         
@@ -82,12 +121,42 @@
             <p>Upload a CSV file with columns for each feature. The file should include headers matching the feature names.</p>
             <form id="csv-form" enctype="multipart/form-data">
                 <input type="file" id="csv-file" name="file" accept=".csv" required>
+                
+                <div style="margin-top: 10px;">
+                    <label for="csv-interpretation-select">Model Interpretation Method:</label>
+                    <select id="csv-interpretation-select" name="interpretation_method">
+                        <option value="none">None</option>
+                        <option value="feature_importance">Feature Importance</option>
+                        {% if shap_available %}
+                        <option value="shap">SHAP Values</option>
+                        {% endif %}
+                    </select>
+                </div>
+                
                 <button type="submit" style="margin-top: 10px;">Upload and Predict</button>
             </form>
             <div id="csv-result" class="result-section">
                 <h3>Batch Prediction Results</h3>
                 <p id="batch-summary"></p>
                 <div id="batch-details"></div>
+                
+                <div id="csv-interpretation" class="interpretation-section">
+                    <div id="csv-feature-importance-plot" style="display: none;">
+                        <h4>Feature Importance</h4>
+                        <img id="csv-feature-importance-img" src="" alt="Feature Importance Plot">
+                    </div>
+                    
+                    <div id="csv-shap-plots" style="display: none;">
+                        <h4>SHAP Summary Plot (All Rows)</h4>
+                        <img id="csv-shap-summary-img" src="" alt="SHAP Summary Plot">
+                        
+                        <h4>SHAP Decision Plot (First Row Example)</h4>
+                        <img id="csv-shap-decision-img" src="" alt="SHAP Decision Plot">
+                        
+                        <h4>SHAP Force Plot (First Row Example)</h4>
+                        <img id="csv-shap-force-img" src="" alt="SHAP Force Plot">
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -109,14 +178,45 @@
                 
                 if (data.error) {
                     document.getElementById('prediction-value').innerHTML = `<span class="error">Error: ${data.error}</span>`;
+                    // Hide interpretation sections
+                    document.getElementById('feature-importance-plot').style.display = 'none';
+                    document.getElementById('shap-plots').style.display = 'none';
                 } else {
                     document.getElementById('prediction-value').textContent = `Predicted value: ${data.prediction}`;
+                    
+                    // Handle interpretations
+                    if (data.interpretations) {
+                        // Feature importance
+                        if (data.interpretations.feature_importance) {
+                            document.getElementById('feature-importance-plot').style.display = 'block';
+                            document.getElementById('feature-importance-img').src = data.interpretations.feature_importance;
+                        } else {
+                            document.getElementById('feature-importance-plot').style.display = 'none';
+                        }
+                        
+                        // SHAP plots
+                        if (data.interpretations.shap_summary) {
+                            document.getElementById('shap-plots').style.display = 'block';
+                            document.getElementById('shap-summary-img').src = data.interpretations.shap_summary;
+                            document.getElementById('shap-decision-img').src = data.interpretations.shap_decision;
+                            document.getElementById('shap-force-img').src = data.interpretations.shap_force;
+                        } else {
+                            document.getElementById('shap-plots').style.display = 'none';
+                        }
+                    } else {
+                        // Hide all interpretation sections if no interpretations
+                        document.getElementById('feature-importance-plot').style.display = 'none';
+                        document.getElementById('shap-plots').style.display = 'none';
+                    }
                 }
             })
             .catch(error => {
                 console.error('Error:', error);
                 document.getElementById('manual-result').style.display = 'block';
                 document.getElementById('prediction-value').innerHTML = `<span class="error">Error: ${error.message}</span>`;
+                // Hide interpretation sections
+                document.getElementById('feature-importance-plot').style.display = 'none';
+                document.getElementById('shap-plots').style.display = 'none';
             });
         });
         
@@ -137,6 +237,9 @@
                 if (data.error) {
                     document.getElementById('batch-summary').innerHTML = `<span class="error">Error: ${data.error}</span>`;
                     document.getElementById('batch-details').innerHTML = '';
+                    // Hide interpretation sections
+                    document.getElementById('csv-feature-importance-plot').style.display = 'none';
+                    document.getElementById('csv-shap-plots').style.display = 'none';
                 } else {
                     document.getElementById('batch-summary').textContent = `Processed ${data.count} rows successfully.`;
                     
@@ -162,6 +265,31 @@
                     }
                     
                     document.getElementById('batch-details').innerHTML = detailsHtml;
+                    
+                    // Handle interpretations
+                    if (data.interpretations) {
+                        // Feature importance
+                        if (data.interpretations.feature_importance) {
+                            document.getElementById('csv-feature-importance-plot').style.display = 'block';
+                            document.getElementById('csv-feature-importance-img').src = data.interpretations.feature_importance;
+                        } else {
+                            document.getElementById('csv-feature-importance-plot').style.display = 'none';
+                        }
+                        
+                        // SHAP plots
+                        if (data.interpretations.shap_summary) {
+                            document.getElementById('csv-shap-plots').style.display = 'block';
+                            document.getElementById('csv-shap-summary-img').src = data.interpretations.shap_summary;
+                            document.getElementById('csv-shap-decision-img').src = data.interpretations.shap_decision;
+                            document.getElementById('csv-shap-force-img').src = data.interpretations.shap_force;
+                        } else {
+                            document.getElementById('csv-shap-plots').style.display = 'none';
+                        }
+                    } else {
+                        // Hide all interpretation sections if no interpretations
+                        document.getElementById('csv-feature-importance-plot').style.display = 'none';
+                        document.getElementById('csv-shap-plots').style.display = 'none';
+                    }
                 }
             })
             .catch(error => {
@@ -169,6 +297,9 @@
                 document.getElementById('csv-result').style.display = 'block';
                 document.getElementById('batch-summary').innerHTML = `<span class="error">Error: ${error.message}</span>`;
                 document.getElementById('batch-details').innerHTML = '';
+                // Hide interpretation sections
+                document.getElementById('csv-feature-importance-plot').style.display = 'none';
+                document.getElementById('csv-shap-plots').style.display = 'none';
             });
         });
     </script>
