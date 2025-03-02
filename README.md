@@ -2,12 +2,12 @@
 
 ## Overview
 
-This project provides a comprehensive pipeline for supervised multivariate regression using **XGBoost**. The system facilitates exploratory data analysis (EDA), robust preprocessing, model training, hyperparameter tuning, and interpretability through **SHAP** and **Feature Importance** techniques. The API serves predictions via a Flask-based interface, allowing single-instance queries and batch processing through CSV uploads.
+This project provides a comprehensive pipeline for supervised multivariate regression using **Catboost**. The system facilitates exploratory data analysis (EDA), robust preprocessing, model training, hyperparameter tuning, and interpretability through **SHAP** and **Feature Importance** techniques. The API serves predictions via a Flask-based interface, allowing single-instance queries and batch processing through CSV uploads.
 
 ### Purpose of Each Section:
 - **EDA**: Extract statistical insights, detect correlations, analyze distributions, and identify outliers.
 - **Preprocessing**: Ensure data quality, feature selection, scaling, and partitioning.
-- **Model Training & Selection**: Optimize and validate models through hyperparameter tuning and cross-validation.
+- **Model Training & Selection**: Optimize and validate models through hyperparameter tuning and k-fold cross-validation.
 - **Evaluation**: Assess performance using various regression metrics, emphasizing error minimization and robustness.
 - **Deployment & API**: Enable model inference through REST API endpoints.
 - **Interpretability**: Utilize **SHAP** and **Feature Importance** to enhance explainability in decision-making.
@@ -43,16 +43,6 @@ Open [http://127.0.0.1:5000/](http://127.0.0.1:5000/) in your local browser.
 
 **POST** `/predict`
 
-#### Request Example:
-
-```json
-{
-  "feature_0": 1.5,
-  "feature_1": 3.2,
-  "interpretation_method": "shap"
-}
-```
-
 ### Predict from CSV
 
 **POST** `/predict_csv`
@@ -73,7 +63,7 @@ Open [http://127.0.0.1:5000/](http://127.0.0.1:5000/) in your local browser.
 - **Distribution Analysis**: Visualize data behavior using histograms, KDE, and boxplots.
 - **Principal Component Analysis (PCA)**: Reduce dimensionality while preserving variance.
 - **Clustering Techniques**: Evaluate K-Means and DBSCAN for feature grouping.
-- **Outlier Detection**: Apply **Z-score** and **IQR-based** methods.
+- **Outlier Detection**: Apply **Z-score** and **IQR-based** methods to detect potential outliers in distributions of features.
 
 ![Correlation Heatmap](data/eda/correlations/pearson_correlation.png)
 ![Correlation Techniques](data/eda/correlations/correlation_methods_comparison.png)
@@ -104,21 +94,12 @@ Open [http://127.0.0.1:5000/](http://127.0.0.1:5000/) in your local browser.
 
 Regression performance metrics:
 
-- **Mean Squared Error (MSE)**: Quadratic penalty for large errors.
+- **Mean Squared Error (MSE)**: Square penalty for large errors.
 - **Root Mean Squared Error (RMSE)**: Measures error in the original scale.
 - **Mean Absolute Error (MAE)**: Average absolute deviations.
 - **Explained Variance Score**: Percentage of variance explained by the model.
 - **Mean Absolute Percentage Error (MAPE)**: Relative percentage error against actual values.
 
-![SHAP](data/gold/final_model/shap/shap_summary_plot.png)
-![Decision Plot](data/gold/final_model/shap/shap_decision_plot.png)
-![Feature Importance](data/gold/final_model/feature_importance/feature_importance_plot.png)
-
-## Model Deployment
-
-- Flask-based REST API for local inference.
-- **Interactive UI**: Enables direct input and visualization.
-- **Batch Prediction**: Supports CSV-based bulk processing.
 
 ## Model Interpretation
 
@@ -133,28 +114,25 @@ Regression performance metrics:
 - **SHAP Decision Plot**: Visualizes feature impact on specific predictions.
 - **SHAP Force Plot**: Displays instance-level influence.
 
-#### Sample Visualizations
-![Feature Importance](data/notebook_plot_40.png)
-![SHAP Summary Plot](data/notebook_plot_45.png)
-![SHAP Decision Plot](data/notebook_plot_50.png)
+
+![SHAP](data/gold/final_model/shap/shap_summary_plot.png)
+![Decision Plot](data/gold/final_model/shap/shap_decision_plot.png)
+![Feature Importance](data/gold/final_model/feature_importance/feature_importance_plot.png)
+
+
+## Model Deployment
+
+- Flask-based REST API for local inference.
+- **Interactive UI**: Enables direct input and visualization.
+- **Batch Prediction**: Supports CSV-based bulk processing.
 
 ## Solutions Architecture Evolution
 
 This section outlines the iterative development of the solution, detailing how architectural decisions were refined to enhance model accuracy, interpretability, and efficiency.
 
-### Initial Approach
-- Basic regression model with default parameters.
-- Minimal feature engineering and preprocessing.
 
-### Intermediate Enhancements
-- Introduction of **Optuna** for hyperparameter tuning.
-- Enhanced preprocessing with outlier handling and feature selection.
-- Cross-validation added for robustness.
 
-### Finalized Architecture
-- **XGBoost** selected for performance and interpretability.
-- **SHAP-based explanations** integrated for model insights.
-- **Flask API** built for real-time predictions and batch inference.
+
 
 ## References
 
