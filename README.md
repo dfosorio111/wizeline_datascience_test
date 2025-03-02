@@ -67,6 +67,7 @@ Open [http://127.0.0.1:5000/](http://127.0.0.1:5000/) in your local browser.
 
 ![Correlation Heatmap](data/eda/correlations/pearson_correlation.png)
 ![Correlation Techniques](data/eda/correlations/correlation_methods_comparison.png)
+![P-Values: Significance](data/eda/correlations/correlation_significance.png)
 ![Variance](data/eda/variance/variance_barplot.png)
 ![PCA Analysis](data/eda/PCA/pca_loadings_heatmap.png)
 ![PCA Analysis Scree Plot](data/eda/PCA/pca_scree_plot.png)
