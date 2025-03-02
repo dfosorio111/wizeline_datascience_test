@@ -137,6 +137,8 @@ Regression performance metrics:
 - **Interactive UI**: Enables direct input and visualization.
 - **Batch Prediction**: Supports CSV-based bulk processing.
 
+![API GUI](data/gold/final_model/API%20GUI.png)
+
 ## Solutions Architecture Evolution
 ### Azure Cloud-Native Solutions Architecture for Multivariate Regression
 
