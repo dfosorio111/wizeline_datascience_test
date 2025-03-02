@@ -212,10 +212,15 @@ This **Azure-native architecture** enables a **highly scalable, efficient, and m
 
 ## References
 
-- Peña, "Análisis de Datos Multivariantes"
-- Suresh, "Hands-On Exploratory Data Analysis with Python"
-- James, "An Introduction to Statistical Learning"
-- Hastie, "The Elements of Statistical Learning"
-- Schölkopf, "Learning with Kernels"
-- Lundberg & Lee, "A Unified Approach to Interpreting Model Predictions"
 
+- D. Peña, Análisis de Datos Multivariantes. Madrid, Spain: Editorial Prentice Hall, 2002.
+
+- S. Suresh, Hands-On Exploratory Data Analysis with Python. Birmingham, UK: Packt Publishing, 2020.
+
+- G. James, D. Witten, T. Hastie, and R. Tibshirani, An Introduction to Statistical Learning. New York, NY, USA: Springer, 2013.
+
+- T. Hastie, R. Tibshirani, and J. Friedman, The Elements of Statistical Learning: Data Mining, Inference, and Prediction, 2nd ed. New York, NY, USA: Springer, 2009.
+
+- B. Schölkopf and A. J. Smola, Learning with Kernels: Support Vector Machines, Regularization, Optimization, and Beyond. Cambridge, MA, USA: MIT Press, 2002.
+
+- S. M. Lundberg and S.-I. Lee, "A unified approach to interpreting model predictions," in Advances in Neural Information Processing Systems, vol. 30, 2017, pp. 4765–4774.
