@@ -75,7 +75,7 @@ Open [http://127.0.0.1:5000/](http://127.0.0.1:5000/) in your local browser.
 - **Clustering Techniques**: Evaluate K-Means and DBSCAN for feature grouping.
 - **Outlier Detection**: Apply **Z-score** and **IQR-based** methods.
 
-![Correlation Techniques](data\eda\correlations\correlation_methods_comparison.png)
+![Correlation Techniques](data/eda/correlations/correlation_methods_comparison.png)
 ![Variance](data\eda\variance\variance_barplot.png")
 ![PCA Analysis]("data\eda\PCA\pca_loadings_heatmap.png")
 ![Feature Distributions](data/notebook_plot_8.png)
