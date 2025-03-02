@@ -76,10 +76,9 @@ Open [http://127.0.0.1:5000/](http://127.0.0.1:5000/) in your local browser.
 - **Outlier Detection**: Apply **Z-score** and **IQR-based** methods.
 
 ![Correlation Techniques](data/eda/correlations/correlation_methods_comparison.png)
-![Variance](data\eda\variance\variance_barplot.png")
-![PCA Analysis]("data\eda\PCA\pca_loadings_heatmap.png")
-![Feature Distributions](data/notebook_plot_8.png)
-
+![Variance](data/eda/variance/variance_barplot.png")
+![PCA Analysis]("data/eda/PCA/pca_loadings_heatmap.png")
+![PCA Analysis Scree Plot]("data/eda/PCA/pca_scree_plot.png")
 
 ## Preprocessing (ETL Pipeline)
 
@@ -97,9 +96,8 @@ Open [http://127.0.0.1:5000/](http://127.0.0.1:5000/) in your local browser.
   - Grid search over Bayesian-optimized hyperparameters.
   - K-fold cross-validation ensures robustness.
 
-#### Sample Visualizations
-![Hyperparameter Optimization](data/notebook_plot_22.png)
-![Model Convergence](data/notebook_plot_25.png)
+![Evaluation Metrics Comparison](data/gold/evaluation_metrics/key_metrics_comparison.png)
+![Real vs Predictions](data/gold/evaluation_metrics/actual_vs_predicted_with_error_bars.png)
 
 ## Model Evaluation
 
@@ -111,9 +109,7 @@ Regression performance metrics:
 - **Explained Variance Score**: Percentage of variance explained by the model.
 - **Mean Absolute Percentage Error (MAPE)**: Relative percentage error against actual values.
 
-#### Sample Visualizations
-![Residual Analysis](data/notebook_plot_30.png)
-![Prediction vs Actual](data/notebook_plot_35.png)
+
 
 ## Model Deployment
 
