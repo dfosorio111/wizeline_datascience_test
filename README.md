@@ -76,9 +76,9 @@ Open [http://127.0.0.1:5000/](http://127.0.0.1:5000/) in your local browser.
 - **Outlier Detection**: Apply **Z-score** and **IQR-based** methods.
 
 ![Correlation Techniques](data/eda/correlations/correlation_methods_comparison.png)
-![Variance](data/eda/variance/variance_barplot.png")
-![PCA Analysis]("data/eda/PCA/pca_loadings_heatmap.png")
-![PCA Analysis Scree Plot]("data/eda/PCA/pca_scree_plot.png")
+![Variance](data/eda/variance/variance_barplot.png)
+![PCA Analysis](data/eda/PCA/pca_loadings_heatmap.png)
+![PCA Analysis Scree Plot](data/eda/PCA/pca_scree_plot.png)
 
 ## Preprocessing (ETL Pipeline)
 
