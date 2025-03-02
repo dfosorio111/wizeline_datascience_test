@@ -75,6 +75,7 @@ Open [http://127.0.0.1:5000/](http://127.0.0.1:5000/) in your local browser.
 - **Clustering Techniques**: Evaluate K-Means and DBSCAN for feature grouping.
 - **Outlier Detection**: Apply **Z-score** and **IQR-based** methods.
 
+![Correlation Heatmap](data/eda/correlations/pearson_correlation.png)
 ![Correlation Techniques](data/eda/correlations/correlation_methods_comparison.png)
 ![Variance](data/eda/variance/variance_barplot.png)
 ![PCA Analysis](data/eda/PCA/pca_loadings_heatmap.png)
@@ -109,7 +110,9 @@ Regression performance metrics:
 - **Explained Variance Score**: Percentage of variance explained by the model.
 - **Mean Absolute Percentage Error (MAPE)**: Relative percentage error against actual values.
 
-
+![SHAP](data/gold/final_model/shap/shap_summary_plot.png)
+![Decision Plot](data/gold/final_model/shap/shap_decision_plot.png)
+![Feature Importance](data/gold/final_model/feature_importance/feature_importance_plot.png)
 
 ## Model Deployment
 
