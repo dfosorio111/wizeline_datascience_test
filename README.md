@@ -102,6 +102,16 @@ Regression performance metrics:
 - **Mean Absolute Percentage Error (MAPE)**: Relative percentage error against actual values.
 
 
+### Evaluation Metrics Table
+
+| Model                  | Mean Squared Error | Root Mean Squared Error | Mean Absolute Error | Median Absolute Error | Max Error | Explained Variance Score | R² Score       | Mean Absolute Percentage Error |
+|------------------------|--------------------|-------------------------|---------------------|-----------------------|-----------|--------------------------|---------------|--------------------------------|
+| RandomForestRegressor_1 | 8.27               | 2.88                    | 2.32                | 1.92                  | 9.55      | 0.71                     | 0.71          | 37.23                          |
+| XGBRegressor_2          | 3.84               | 1.96                    | 1.54                | 1.29                  | 7.39      | 0.87                     | 0.87          | 18.43                          |
+| LGBMRegressor_3         | 4.13               | 2.03                    | 1.63                | 1.44                  | 6.72      | 0.86                     | 0.86          | 21.50                          |
+| CatBoostRegressor_4     | 3.72               | 1.93                    | 1.50                | 1.29                  | 7.27      | 0.87                     | 0.87          | 22.18                          |
+
+
 ## Model Interpretation
 
 ### Feature Importance Plot
