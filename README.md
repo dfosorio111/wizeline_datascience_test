@@ -132,6 +132,7 @@ This section outlines the iterative development of the solution, detailing how a
 
 
 
+![Cloud-Native Solutions Architecture](data/gold/final_model/azure_solutions_architecture.png)
 
 
 ## References
