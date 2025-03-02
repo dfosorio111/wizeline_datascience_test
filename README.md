@@ -117,7 +117,7 @@ Regression performance metrics:
 ### Feature Importance Plot
 
 - Evaluates feature weight impact on predictions.
-- Extracted directly from the XGBoost model.
+- Extracted directly from the model.
 
 ### SHAP Summary & Decision Plots
 
